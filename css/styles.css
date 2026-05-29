@@ -829,3 +829,15 @@ input, textarea, select {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+/* ---- FIX FILTROS MÓVIL ---- */
+.cat-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cat-emoji,
+.cat-card span {
+  pointer-events: none;
+}
