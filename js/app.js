@@ -1,50 +1,57 @@
 /* ==========================================================================
-   NEXUM — app.js (Categorías dinámicas + columna "visible" desde Sheets)
+   NEXUM — app.js — versión definitiva móvil
    ========================================================================== */
 
 const GOOGLE_SHEETS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQd6dWPINt3RRD_Ttx4S9n2ncALrHFl2k8E4qAB6bqsAH6NmzCjURunilyldWJrb5lVMTMr94ahRgEv/pub?gid=0&single=true&output=tsv";
 
-// Emojis automáticos por nombre de categoría (ampliable)
 const CATEGORIA_EMOJIS = {
-  alimentos:        "🛍️",
-  cárnicos:         "🥩",
-  carnicos:         "🥩",
-  bebidas:          "🥤",
-  aseo:             "🧴",
-  electrodomésticos:"📺",
-  electrodomesticos:"📺",
-  combos:           "📦",
-  frutas:           "🍎",
-  verduras:         "🥦",
-  panadería:        "🍞",
-  panaderia:        "🍞",
-  lácteos:          "🥛",
-  lacteos:          "🥛",
-  otros:            "🏷️",
-  enlatados:        "🥫",
-  café:             "☕",
-  granos:           "🫘",
+  alimentos:         "🛍️",
+  cárnicos:          "🥩",
+  carnicos:          "🥩",
+  bebidas:           "🥤",
+  aseo:              "🧴",
+  electrodomésticos: "📺",
+  electrodomesticos: "📺",
+  combos:            "📦",
+  frutas:            "🍎",
+  verduras:          "🥦",
+  panadería:         "🍞",
+  panaderia:         "🍞",
+  lácteos:           "🥛",
+  lacteos:           "🥛",
+  otros:             "🏷️",
+  enlatados:         "🥫",
+  café:              "☕",
+  granos:            "🫘",
 };
 
-// --- 1. CARGA DE DATOS ASÍNCRONA (GOOGLE SHEETS) ---
+// ── FILTRO ── función global llamada desde onclick en el HTML
+window.filtrarCategoria = function(filtro, elClicado) {
+  // Quitar activo de todas las tarjetas
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+  // Poner activo en la clicada
+  elClicado.classList.add('active');
+
+  // Mostrar / ocultar productos
+  document.querySelectorAll('.product-card').forEach(tarjeta => {
+    const mostrar = filtro === 'todos' || tarjeta.dataset.category === filtro;
+    tarjeta.style.display = mostrar ? 'flex' : 'none';
+  });
+};
+
+// ── CARGA DESDE GOOGLE SHEETS ──
 async function cargarProductosDesdeSheets() {
   try {
-    const respuesta = await fetch(`${GOOGLE_SHEETS_URL}&t=${Date.now()}`, {
-      cache: "no-store"
-    });
-    const textoTSV = await respuesta.text();
-
-    const filas = textoTSV.split("\n").slice(1);
+    const respuesta = await fetch(`${GOOGLE_SHEETS_URL}&t=${Date.now()}`, { cache: "no-store" });
+    const textoTSV  = await respuesta.text();
+    const filas     = textoTSV.split("\n").slice(1);
 
     window.NEXUM_PRODUCTS = filas.map(fila => {
       if (!fila.trim()) return null;
-
       const col = fila.split("\t");
       if (col.length < 6) return null;
 
       const visibleRaw = col[8] ? col[8].trim().toLowerCase() : "si";
-      const visible = (visibleRaw !== "no");
-
       return {
         id:       parseInt(col[0].trim(), 10) || Date.now(),
         category: col[1] ? col[1].trim().toLowerCase() : "otros",
@@ -54,43 +61,42 @@ async function cargarProductosDesdeSheets() {
         price:    col[5] ? parseFloat(col[5].trim()) : 0.00,
         unit:     col[6] ? col[6].trim() : "unidad",
         badge:    col[7] ? col[7].trim() : "",
-        visible
+        visible:  visibleRaw !== "no",
       };
-    }).filter(p => p !== null);
+    }).filter(Boolean);
 
-    renderizarCategorias();  // 1ro: crea las cat-card y asigna el listener UNA SOLA VEZ
-    renderizarCatalogo();    // 2do: crea las product-card
+    renderizarCategorias();
+    renderizarCatalogo();
 
     document.dispatchEvent(new CustomEvent('productosCargados'));
     quitarLoader();
 
   } catch (error) {
-    console.error("Error cargando el inventario de Google:", error);
+    console.error("Error cargando inventario:", error);
     quitarLoader();
   }
 }
 
-// --- 2. CATEGORÍAS DINÁMICAS DESDE LOS DATOS ---
+// ── CATEGORÍAS ──
 function renderizarCategorias() {
   const grid = document.querySelector('.categories-grid');
   if (!grid) return;
 
   const categorias = [...new Set(
-    window.NEXUM_PRODUCTS
-      .filter(p => p.visible)
-      .map(p => p.category)
+    window.NEXUM_PRODUCTS.filter(p => p.visible).map(p => p.category)
   )];
 
+  // onclick="filtrarCategoria(..., this)" — funciona en cualquier móvil sin depender de addEventListener
   const html = `
-    <div class="cat-card" data-filter="todos">
+    <div class="cat-card active" onclick="filtrarCategoria('todos', this)">
       <div class="cat-emoji">🔍</div>
       <span>Todos</span>
     </div>
     ${categorias.map(cat => {
-      const emoji = CATEGORIA_EMOJIS[cat] || "🏷️";
+      const emoji  = CATEGORIA_EMOJIS[cat] || "🏷️";
       const nombre = cat.charAt(0).toUpperCase() + cat.slice(1);
       return `
-        <div class="cat-card" data-filter="${cat}">
+        <div class="cat-card" onclick="filtrarCategoria('${cat}', this)">
           <div class="cat-emoji">${emoji}</div>
           <span>${nombre}</span>
         </div>`;
@@ -98,15 +104,9 @@ function renderizarCategorias() {
   `;
 
   grid.innerHTML = html;
-
-  const primero = grid.querySelector('.cat-card');
-  if (primero) primero.classList.add('active');
-
-  // ✅ El listener se asigna aquí, UNA SOLA VEZ, después de crear el HTML
-  configurarFiltrosCategorias();
 }
 
-// --- 3. RENDERIZADO DEL CATÁLOGO ---
+// ── CATÁLOGO ──
 function renderizarCatalogo() {
   const grid = document.getElementById('productsGrid') || document.querySelector('.products-grid');
   if (!grid) return;
@@ -129,11 +129,9 @@ function renderizarCatalogo() {
       </div>
     </div>
   `).join('');
-
-  // ✅ NO se llama configurarFiltrosCategorias() aquí — evita duplicar listeners
 }
 
-// --- 4. LOADER ---
+// ── LOADER ──
 function quitarLoader() {
   const loader = document.getElementById('loader');
   if (loader) {
@@ -142,7 +140,7 @@ function quitarLoader() {
   }
 }
 
-// --- 5. MENÚ MÓVIL ---
+// ── MENÚ MÓVIL ──
 function configurarMenuMovil() {
   const hamburger  = document.getElementById('hamburger');
   const mobileMenu = document.getElementById('mobileMenu');
@@ -160,37 +158,10 @@ function configurarMenuMovil() {
   }
 }
 
-// --- 6. FILTROS DE CATEGORÍAS ---
-// ✅ Usa delegación de eventos: el listener va en el contenedor, no en cada tarjeta.
-// Esto funciona tanto en desktop como en móvil, sin importar cuándo se creó el HTML.
-function configurarFiltrosCategorias() {
-  const catGrid = document.querySelector('.categories-grid');
-  const prodGrid = document.getElementById('productsGrid') || document.querySelector('.products-grid');
-  if (!catGrid || !prodGrid) return;
-
-  catGrid.addEventListener('click', (e) => {
-    const boton = e.target.closest('.cat-card');
-    if (!boton) return;
-
-    // Quitar activo de todos y activar el clickeado
-    catGrid.querySelectorAll('.cat-card').forEach(b => b.classList.remove('active'));
-    boton.classList.add('active');
-
-    const filtro = boton.dataset.filter;
-
-    // Filtrar productos
-    prodGrid.querySelectorAll('.product-card').forEach(tarjeta => {
-      const mostrar = filtro === 'todos' || tarjeta.dataset.category === filtro;
-      tarjeta.style.display = mostrar ? 'flex' : 'none';
-    });
-  });
-}
-
-// --- 7. BUSCADOR ---
+// ── BUSCADOR ──
 function configurarBuscador() {
   const inputBuscar = document.getElementById('searchInput');
   if (!inputBuscar) return;
-
   inputBuscar.oninput = (e) => {
     const texto = e.target.value.toLowerCase().trim();
     document.querySelectorAll('.product-card').forEach(tarjeta => {
@@ -201,36 +172,29 @@ function configurarBuscador() {
   };
 }
 
-// --- 8. CARRITO SIDEBAR ---
+// ── CARRITO SIDEBAR ──
 function configurarAperturaCarrito() {
   const cartToggle  = document.getElementById('cartToggle');
   const cartClose   = document.getElementById('cartClose');
   const cartOverlay = document.getElementById('cartOverlay');
   const cartSidebar = document.getElementById('cartSidebar');
 
-  if (cartToggle && cartSidebar && cartOverlay) {
-    cartToggle.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      cartSidebar.classList.add('open');
-      cartOverlay.classList.add('open');
-    };
-  }
-  if (cartClose && cartSidebar && cartOverlay) {
-    cartClose.onclick = () => {
-      cartSidebar.classList.remove('open');
-      cartOverlay.classList.remove('open');
-    };
-  }
-  if (cartOverlay && cartSidebar) {
-    cartOverlay.onclick = () => {
-      cartSidebar.classList.remove('open');
-      cartOverlay.classList.remove('open');
-    };
-  }
+  if (cartToggle) cartToggle.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    cartSidebar.classList.add('open');
+    cartOverlay.classList.add('open');
+  };
+  if (cartClose) cartClose.onclick = () => {
+    cartSidebar.classList.remove('open');
+    cartOverlay.classList.remove('open');
+  };
+  if (cartOverlay) cartOverlay.onclick = () => {
+    cartSidebar.classList.remove('open');
+    cartOverlay.classList.remove('open');
+  };
 }
 
-// --- 9. ARRANQUE ---
+// ── ARRANQUE ──
 document.addEventListener('DOMContentLoaded', () => {
   configurarMenuMovil();
   configurarBuscador();
