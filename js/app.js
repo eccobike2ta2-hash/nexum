@@ -27,15 +27,12 @@ const CATEGORIA_EMOJIS = {
 
 // ── FILTRO ── función global llamada desde onclick en el HTML
 window.filtrarCategoria = function(filtro, elClicado) {
-  // Quitar activo de todas las tarjetas
   document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
-  // Poner activo en la clicada
   elClicado.classList.add('active');
 
-  // Mostrar / ocultar productos
   document.querySelectorAll('.product-card').forEach(tarjeta => {
     const mostrar = filtro === 'todos' || tarjeta.dataset.category === filtro;
-    tarjeta.style.display = mostrar ? 'flex' : 'none';
+    tarjeta.classList.toggle('oculto', !mostrar);
   });
 };
 
@@ -201,4 +198,5 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarAperturaCarrito();
   cargarProductosDesdeSheets();
 });
+
 
