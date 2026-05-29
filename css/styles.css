@@ -841,3 +841,6 @@ input, textarea, select {
 .cat-card span {
   pointer-events: none;
 }
+.product-card.oculto {
+  display: none !important;
+}
