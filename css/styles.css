@@ -471,7 +471,7 @@ section { padding: 96px 0; width: 100%; }
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   font-size: 72px;
-  background: var(--brand-soft);
+  background: #ffffff;
   position: relative;
 }
 .product-badge {
@@ -722,7 +722,7 @@ section { padding: 96px 0; width: 100%; }
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: var(--brand-soft) !important;
+    background: #ffffff !important;
     font-size: 40px;
   }
   .product-img img {
@@ -931,4 +931,7 @@ input, textarea, select { font-size: 16px !important; }
 }
 @media (max-width: 900px) {
   .cart-btn { margin-left: auto; }
+}
+.product-img img {
+  mix-blend-mode: multiply;
 }
